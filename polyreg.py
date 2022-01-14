@@ -4,6 +4,8 @@
 '''
 
 import numpy as np
+import scipy.optimize as op
+from numpy.linalg import inv
 
 
 #-----------------------------------------------------------------
@@ -17,6 +19,8 @@ class PolynomialRegression:
         Constructor
         '''
         #TODO
+        self.degree = degree
+        self.regLambda = regLambda
 
 
     def polyfeatures(self, X, degree):
@@ -34,6 +38,13 @@ class PolynomialRegression:
             degree is a positive integer
         '''
         #TODO
+
+        X_poly = X
+
+        for i in range(1, degree): 
+            X_poly = np.c_[X_poly, X ** (i + 1)]
+
+        return X_poly
         
 
     def fit(self, X, y):
@@ -49,6 +60,34 @@ class PolynomialRegression:
                 at first
         '''
         #TODO
+    
+        X_poly = self.polyfeatures(X,self.degree)
+        
+        # mean vector and standard deviation vector
+        self.mu = np.mean(X_poly, axis=0)
+        self.sigma = np.std(X_poly, axis=0)
+        
+        X_poly = (X_poly - self.mu) / self.sigma
+        n = len(X)
+        X_poly_normalized = np.c_[np.ones((n,1)), X_poly]
+
+        n,d = X_poly_normalized.shape
+
+        print(X_poly_normalized)
+        print(X_poly_normalized.shape)
+
+        # construct reg matrix
+        regMatrix = self.regLambda * np.eye(d)
+
+        # self.theta = np.linalg.pinv(X.T.dot(X) + regMatrix).dot(X.T).dot(y)
+        # self.theta = inv(X_poly_normalized.T @ X_poly_normalized ) @ (X_poly_normalized.T @ y)
+        self.theta = np.linalg.pinv(X_poly_normalized.T.dot(X_poly_normalized) + regMatrix).dot(X_poly_normalized.T).dot(y)
+
+        print("Calculated theta: ")
+        print(self.theta)
+
+        
+        
         
         
     def predict(self, X):
@@ -60,6 +99,23 @@ class PolynomialRegression:
             an n-by-1 numpy array of the predictions
         '''
         # TODO
+
+        X_poly = self.polyfeatures(X,self.degree)
+        
+        # mean vector and standard deviation vector
+        self.mu = np.mean(X_poly, axis=0)
+        self.sigma = np.std(X_poly, axis=0)
+        
+        X_poly = (X_poly - self.mu) / self.sigma
+        n = len(X)
+        X_poly_normalized = np.c_[np.ones((n,1)), X_poly]
+        n = len(X)
+        
+        # add 1s column
+        X_poly_normalized = np.c_[np.ones((n,1)), X_poly]
+
+        # predict
+        return X_poly_normalized.dot(self.theta)
 
 
 
@@ -90,22 +146,22 @@ def learningCurve(Xtrain, Ytrain, Xtest, Ytest, regLambda, degree):
         errorTrains[0:1] and errorTests[0:1] won't actually matter, since we start displaying the learning curve at n = 2 (or higher)
     '''
     
-    n = len(Xtrain);
+    n = len(Xtrain)
     
     errorTrain = np.zeros((n))
     errorTest = np.zeros((n))
-    for i in xrange(2, n):
+    for i in range(2, n):
         Xtrain_subset = Xtrain[:(i+1)]
         Ytrain_subset = Ytrain[:(i+1)]
         model = PolynomialRegression(degree, regLambda)
         model.fit(Xtrain_subset,Ytrain_subset)
         
         predictTrain = model.predict(Xtrain_subset)
-        err = predictTrain - Ytrain_subset;
-        errorTrain[i] = np.multiply(err, err).mean();
+        err = predictTrain - Ytrain_subset
+        errorTrain[i] = np.multiply(err, err).mean()
         
         predictTest = model.predict(Xtest)
-        err = predictTest - Ytest;
-        errorTest[i] = np.multiply(err, err).mean();
-    
+        err = predictTest - Ytest
+        errorTest[i] = np.multiply(err, err).mean()
+        
     return (errorTrain, errorTest)
